@@ -830,11 +830,13 @@ async function init(){
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => init());
-</script>
-</body>
-</html>
-init();
+setTimeout(() => {
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+}, 100);
 </script>
 </body>
 </html>
