@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="우리의 한 주">
 <meta name="theme-color" content="#3a3530">
@@ -11,9 +11,9 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%233a3530'/><text x='90' y='115' font-size='90' text-anchor='middle'>🌿</text></svg>">
 <title>우리의 한 주</title>
 
-<!-- Firebase SDK (for shared rooms) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- Firebase SDK (cdnjs - compat) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-database-compat.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Noto+Sans+KR:wght@400;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 
@@ -189,9 +189,7 @@ select {
 
 <script>
 // ══════════════════════════════════════════════════════
-// 🔥 Firebase 설정 - 본인의 Firebase 프로젝트 정보를 넣으세요
-// Firebase 콘솔(https://console.firebase.google.com)에서
-// 프로젝트 만들기 → Realtime Database 활성화 → 웹앱 추가
+// 🔥 Firebase 설정
 // ══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCwiRtkOIxhBpTgnPlk9cdQUZHUnvCFmZg",
@@ -204,14 +202,23 @@ const FIREBASE_CONFIG = {
   measurementId: "G-HEJNYTJ38S"
 };
 
-const useFirebase = !!FIREBASE_CONFIG.apiKey;
+let useFirebase = false;
 let db = null;
 
-if (useFirebase) {
+// Firebase 초기화 (compat SDK)
+function loadFirebase() {
+  if (typeof firebase === 'undefined') {
+    console.warn('Firebase SDK not loaded, running offline');
+    return;
+  }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
-  } catch(e) { console.error('Firebase init failed:', e); }
+    useFirebase = true;
+    console.log('Firebase connected!');
+  } catch(e) {
+    console.warn('Firebase init failed, running offline:', e);
+  }
 }
 
 // ── Helpers ──
@@ -264,9 +271,9 @@ async function fbGet(path){
 }
 function fbListen(path, cb){
   if(!db) return ()=>{};
-  const ref=db.ref(path);
-  ref.on('value', snap=>cb(snap.val()));
-  return ()=>ref.off('value');
+  const r=db.ref(path);
+  r.on('value', snap=>cb(snap.val()));
+  return ()=>r.off('value');
 }
 
 // ── App ──
@@ -802,6 +809,9 @@ function scheduleNotification(){
 
 // ── Init ──
 async function init(){
+  // Load Firebase (non-blocking)
+  loadFirebase();
+
   // Register service worker
   if('serviceWorker' in navigator){
     try{ await navigator.serviceWorker.register('./sw.js'); }catch(e){ console.log('SW registration failed:',e); }
@@ -820,6 +830,10 @@ async function init(){
   }
 }
 
+document.addEventListener('DOMContentLoaded', () => init());
+</script>
+</body>
+</html>
 init();
 </script>
 </body>
