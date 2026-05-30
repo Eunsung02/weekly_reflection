@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="우리의 한 주">
+<meta name="theme-color" content="#3a3530">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%233a3530'/><text x='90' y='115' font-size='90' text-anchor='middle'>🌿</text></svg>">
+<title>우리의 한 주</title>
+
+<!-- Firebase SDK (for shared rooms) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Noto+Sans+KR:wght@400;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+
+<style>
+/* ══════ 여기에 Firebase 설정을 붙여넣으세요 ══════
+   아래 FIREBASE_CONFIG 변수에 본인의 Firebase 프로젝트 설정을 넣으면
+   두 사람이 실시간으로 공유할 수 있습니다.
+   Firebase 없이도 혼자 사용 가능합니다.
+   ════════════════════════════════════════════════ */
+
+:root {
+  --bg: #f7f4ee; --bg2: #f0ebe3; --bg3: #e9e3d9;
+  --card: #fdfcfa; --border: #e8e5df; --border2: #ddd9d2;
+  --text: #3a3530; --text2: #5a554e; --text3: #8a857e; --text4: #aaa; --text5: #ccc;
+  --green: #4a7c59; --green-bg: #f0f7f1;
+  --blue: #5b7a9d; --blue-bg: #eef3f8;
+  --orange: #b8763e; --orange-bg: #faf3eb;
+  --red: #c0695a;
+  --serif: 'Noto Serif KR', Georgia, serif;
+  --sans: 'Noto Sans KR', sans-serif;
+  --display: 'Playfair Display', 'Noto Serif KR', serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: var(--serif);
+  background: linear-gradient(170deg, var(--bg) 0%, var(--bg2) 40%, var(--bg3) 100%);
+  min-height: 100vh; min-height: 100dvh;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+.container { max-width: 520px; margin: 0 auto; padding: 0 16px 100px; }
+
+/* Header */
+.header { padding: 32px 20px 16px; text-align: center; }
+.header-label { font-size:11px; letter-spacing:5px; color:var(--text3); font-family:var(--sans); font-weight:600; }
+.header-title { font-size:30px; font-weight:900; color:var(--text); font-family:var(--display); margin:6px 0 4px; }
+.header-date { font-size:13px; color:var(--text3); }
+.header-pills { display:flex; justify-content:center; gap:6px; margin-top:10px; flex-wrap:wrap; }
+.pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; font-family:var(--sans); }
+
+/* Card */
+.card { background:var(--card); border-radius:16px; padding:22px 20px; border:1px solid var(--border); margin-bottom:16px; }
+
+/* Buttons */
+.btn {
+  padding:12px 22px; border:none; border-radius:12px; font-size:15px; font-weight:600;
+  font-family:var(--sans); cursor:pointer; transition:all 0.2s; width:100%;
+}
+.btn-primary { background:linear-gradient(135deg,var(--text),var(--text2)); color:var(--card); }
+.btn-green { background:linear-gradient(135deg,var(--green),#5a9a6a); color:#fff; }
+.btn-blue { background:linear-gradient(135deg,var(--blue),#6a8eb5); color:#fff; }
+.btn-ghost { background:transparent; color:var(--text3); border:1px solid var(--border2); }
+.btn:disabled { opacity:0.4; cursor:default; }
+.btn-small { padding:6px 14px; font-size:13px; width:auto; border-radius:8px; }
+
+/* Input */
+.input {
+  width:100%; padding:12px 14px; border:1.5px solid var(--border2); border-radius:10px;
+  font-size:15px; font-family:var(--serif); background:#fff; outline:none; color:var(--text);
+  transition:border-color 0.2s;
+}
+.input:focus { border-color:var(--green); }
+.input-code { text-align:center; font-size:24px; font-weight:700; letter-spacing:6px; padding:16px; }
+
+textarea.input { resize:none; line-height:1.6; font-size:14.5px; }
+textarea.input:focus { border-color:var(--green); }
+
+/* Tabs */
+.tabs { display:flex; justify-content:center; gap:3px; padding:0 12px 14px; flex-wrap:wrap; }
+.tab {
+  padding:9px 18px; border:none; border-radius:10px; font-size:14px; font-weight:400;
+  font-family:var(--sans); background:transparent; color:var(--text3); cursor:pointer; transition:0.2s;
+}
+.tab.active { background:var(--text); color:var(--card); font-weight:600; }
+
+/* Question card */
+.qcard { border-radius:16px; padding:22px 20px; margin-bottom:16px; }
+.qcard-grateful { background:var(--green-bg); border:1px solid rgba(74,124,89,0.08); }
+.qcard-regret { background:var(--blue-bg); border:1px solid rgba(91,122,157,0.08); }
+.qcard-nextweek { background:var(--orange-bg); border:1px solid rgba(184,118,62,0.08); }
+
+.qcard-header { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+.qcard-emoji { font-size:24px; }
+.qcard-title { font-size:16px; font-weight:700; margin:0; }
+.qcard-sub { font-size:12px; color:var(--text4); font-family:var(--sans); margin:2px 0 0; }
+
+.entry-row { display:flex; align-items:flex-start; gap:9px; margin-bottom:7px; }
+.entry-num {
+  min-width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; font-family:var(--sans); margin-top:10px; flex-shrink:0;
+}
+
+/* Partner answer */
+.partner-box { margin-top:14px; padding:14px 16px; background:#fff; border-radius:12px; }
+.partner-label { margin:0 0 8px; font-size:12px; font-weight:600; font-family:var(--sans); }
+
+/* Progress */
+.progress-bar { flex:1; height:4px; border-radius:2px; background:var(--border2); margin-right:10px; }
+.progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--green),var(--orange)); transition:width 0.4s; }
+
+/* Together view */
+.together-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.together-cell {
+  background:#fff; border-radius:8px; padding:8px 10px; margin-bottom:5px;
+  font-size:13.5px; color:var(--text); line-height:1.5; min-height:20px;
+}
+
+/* Day picker */
+.day-picker { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px; }
+.day-btn {
+  padding:8px 13px; border:1.5px solid var(--border2); border-radius:10px; font-size:13px;
+  font-family:var(--sans); background:#fff; color:var(--text2); cursor:pointer; transition:0.15s;
+}
+.day-btn.active { border:2px solid var(--text); background:var(--text); color:var(--card); font-weight:700; }
+
+/* History */
+.history-item { cursor:pointer; transition:0.2s; }
+.history-header { display:flex; justify-content:space-between; align-items:center; }
+.history-arrow { font-size:11px; color:var(--text5); transition:transform 0.2s; display:inline-block; }
+.history-arrow.open { transform:rotate(180deg); }
+
+/* Onboarding */
+.onboard-wrap {
+  min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.onboard-inner { max-width:420px; width:100%; }
+.code-display {
+  background:linear-gradient(135deg,var(--bg),var(--bg3)); border-radius:14px; padding:24px; margin-bottom:18px; text-align:center;
+}
+.code-text { font-size:36px; font-weight:900; letter-spacing:8px; color:var(--text); font-family:var(--display); }
+
+/* Notification banner */
+.notif-status { margin-top:14px; padding:12px 14px; background:var(--green-bg); border-radius:10px; }
+
+/* Fade-in animation */
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease-out; }
+
+/* Bottom nav */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; background:rgba(253,252,250,0.92);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--border); display:flex; justify-content:center;
+  padding:8px 0 calc(8px + var(--safe-bottom)); z-index:100;
+}
+
+/* Toast */
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:10px 20px;
+  background:var(--green); color:#fff; border-radius:12px; font-size:14px; font-family:var(--sans);
+  z-index:200; animation:fadeIn 0.3s;
+}
+
+.hidden { display:none !important; }
+
+select {
+  padding:10px 14px; border:1.5px solid var(--border2); border-radius:10px;
+  font-size:15px; font-family:var(--serif); background:#fff; color:var(--text);
+  outline:none; cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 🔥 Firebase 설정 - 본인의 Firebase 프로젝트 정보를 넣으세요
+// Firebase 콘솔(https://console.firebase.google.com)에서
+// 프로젝트 만들기 → Realtime Database 활성화 → 웹앱 추가
+// ══════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  // apiKey: "여기에-붙여넣기",
+  // authDomain: "프로젝트명.firebaseapp.com",
+  // databaseURL: "https://프로젝트명-default-rtdb.firebaseio.com",
+  // projectId: "프로젝트명",
+  // storageBucket: "프로젝트명.appspot.com",
+  // messagingSenderId: "숫자",
+  // appId: "앱아이디"
+};
+
+const useFirebase = !!FIREBASE_CONFIG.apiKey;
+let db = null;
+
+if (useFirebase) {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+  } catch(e) { console.error('Firebase init failed:', e); }
+}
+
+// ── Helpers ──
+const DAYS_KO = ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"];
+const DAYS_SHORT = ["일","월","화","수","목","금","토"];
+const QS = [
+  { key:"grateful", emoji:"🌿", title:"고마운 것", sub:"이번 주 감사했던 순간들", cls:"qcard-grateful", c:"var(--green)" },
+  { key:"regret",   emoji:"🌊", title:"아쉬운 것", sub:"다음엔 더 나아질 수 있는 것들", cls:"qcard-regret", c:"var(--blue)" },
+  { key:"nextweek", emoji:"🔥", title:"다음 주 해볼 일 + 회고", sub:"앞으로의 다짐과 지난 회고", cls:"qcard-nextweek", c:"var(--orange)" },
+];
+
+function getWeekId(d=new Date()){
+  const t=new Date(d); t.setHours(0,0,0,0);
+  t.setDate(t.getDate()+3-((t.getDay()+6)%7));
+  const w1=new Date(t.getFullYear(),0,4);
+  const wn=1+Math.round(((t-w1)/864e5-3+((w1.getDay()+6)%7))/7);
+  return `${t.getFullYear()}-W${String(wn).padStart(2,"0")}`;
+}
+function fmtDate(d){ return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS_SHORT[d.getDay()]})`; }
+function genCode(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
+function uid(){ return 'u_'+Math.random().toString(36).substring(2,10)+Date.now().toString(36); }
+function empty(){ return { grateful:["","",""], regret:["","",""], nextweek:["","",""] }; }
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// ── State ──
+let state = {
+  profile: null, // { uid, name, roomCode, settings }
+  tab: 'write',
+  entries: empty(),
+  partnerEntries: null,
+  partnerName: '',
+  history: [],
+  roomCode: '',
+  saving: false,
+  syncing: false,
+};
+
+// ── Storage (localStorage + optional Firebase) ──
+const LS = {
+  get(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch{ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} },
+  del(k){ try{ localStorage.removeItem(k); }catch{} },
+};
+
+async function fbSet(path, val){
+  if(!db) return; try{ await db.ref(path).set(val); }catch(e){ console.error(e); }
+}
+async function fbGet(path){
+  if(!db) return null; try{ const s=await db.ref(path).once('value'); return s.val(); }catch{ return null; }
+}
+function fbListen(path, cb){
+  if(!db) return ()=>{};
+  const ref=db.ref(path);
+  ref.on('value', snap=>cb(snap.val()));
+  return ()=>ref.off('value');
+}
+
+// ── App ──
+const app = document.getElementById('app');
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function renderOnboarding(){
+  let step=0, name='', code='', err='', loading=false, newCode=genCode(), copied=false;
+
+  function draw(){
+    let html=`<div class="onboard-wrap"><div class="onboard-inner"><div style="text-align:center;margin-bottom:36px">
+      <p class="header-label">WEEKLY REFLECTION</p>
+      <h1 style="font-size:36px;font-weight:900;color:var(--text);font-family:var(--display);margin:6px 0 8px">우리의 한 주</h1>
+      <p style="font-size:14.5px;color:var(--text3);line-height:1.6">매주 함께 돌아보는 소중한 시간</p>
+    </div>`;
+
+    if(step===0){
+      html+=`<div class="card fade-in">
+        <h3 style="font-size:17px;margin-bottom:4px">반가워요! 👋</h3>
+        <p style="font-size:13.5px;color:var(--text4);font-family:var(--sans);margin-bottom:18px">파트너에게 보여질 이름을 알려주세요</p>
+        <input class="input" id="nameInput" placeholder="이름" value="${esc(name)}">
+        <button class="btn btn-primary" style="margin-top:14px" id="nameNext" ${!name.trim()?'disabled':''}>다음 →</button>
+      </div>`;
+    } else if(step===1){
+      html+=`<div class="card fade-in">
+        <h3 style="font-size:17px;text-align:center;margin-bottom:20px">${esc(name)}님, 환영해요!</h3>
+        <button class="btn btn-green" style="margin-bottom:10px;padding:18px" id="createBtn">🌱 새 방 만들기</button>
+        <button class="btn btn-blue" style="padding:18px" id="joinBtn">🔗 초대 코드로 참여하기</button>
+        ${!useFirebase?'<p style="margin-top:14px;font-size:12px;color:var(--red);font-family:var(--sans);text-align:center">⚠️ Firebase 미설정 — 혼자 사용 모드로 작동합니다</p>':''}
+        <button class="btn btn-ghost btn-small" style="width:100%;margin-top:10px" id="backBtn0">← 뒤로</button>
+      </div>`;
+    } else if(step===2){
+      html+=`<div class="card fade-in">
+        <h3 style="font-size:17px;text-align:center;margin-bottom:6px">방이 준비되었어요!</h3>
+        <p style="font-size:13px;color:var(--text4);font-family:var(--sans);text-align:center;margin-bottom:18px">아래 코드를 파트너에게 공유해주세요</p>
+        <div class="code-display"><p class="code-text">${newCode}</p></div>
+        <button class="btn btn-ghost" style="margin-bottom:14px" id="copyBtn">${copied?'✅ 복사됨!':'📋 코드 복사하기'}</button>
+        <button class="btn btn-primary" style="padding:15px;font-size:15px" id="startBtn">${loading?'만드는 중...':'시작하기 →'}</button>
+        ${err?`<p style="margin-top:10px;font-size:13px;color:var(--red);font-family:var(--sans);text-align:center">${esc(err)}</p>`:''}
+      </div>`;
+    } else if(step===3){
+      html+=`<div class="card fade-in">
+        <h3 style="font-size:17px;text-align:center;margin-bottom:6px">초대 코드 입력</h3>
+        <p style="font-size:13px;color:var(--text4);font-family:var(--sans);text-align:center;margin-bottom:18px">파트너에게 받은 코드를 입력해주세요</p>
+        <input class="input input-code" id="codeInput" placeholder="ABC123" maxlength="8" value="${esc(code)}">
+        ${err?`<p style="margin-top:10px;font-size:13px;color:var(--red);font-family:var(--sans);text-align:center">${esc(err)}</p>`:''}
+        <button class="btn btn-blue" style="margin-top:14px;padding:15px;font-size:15px" id="joinConfirm">${loading?'참여하는 중...':'참여하기 →'}</button>
+        <button class="btn btn-ghost btn-small" style="width:100%;margin-top:8px" id="backBtn1">← 뒤로</button>
+      </div>`;
+    }
+
+    html+=`</div></div>`;
+    app.innerHTML=html;
+
+    // Events
+    if(step===0){
+      const inp=document.getElementById('nameInput');
+      inp?.focus();
+      inp?.addEventListener('input',e=>{name=e.target.value; document.getElementById('nameNext').disabled=!name.trim();});
+      inp?.addEventListener('keydown',e=>{if(e.key==='Enter'&&name.trim()){step=1;draw();}});
+      document.getElementById('nameNext')?.addEventListener('click',()=>{if(name.trim()){step=1;draw();}});
+    }
+    if(step===1){
+      document.getElementById('createBtn')?.addEventListener('click',()=>{step=2;draw();});
+      document.getElementById('joinBtn')?.addEventListener('click',()=>{step=3;draw();});
+      document.getElementById('backBtn0')?.addEventListener('click',()=>{step=0;draw();});
+    }
+    if(step===2){
+      document.getElementById('copyBtn')?.addEventListener('click',()=>{
+        navigator.clipboard?.writeText(newCode); copied=true; draw();
+        setTimeout(()=>{copied=false;draw();},1500);
+      });
+      document.getElementById('startBtn')?.addEventListener('click',async()=>{
+        if(loading) return; loading=true; draw();
+        const id=uid();
+        const profile={ uid:id, name, roomCode:newCode, settings:{day:0,hour:20,minute:0,notif:false} };
+        const room={ code:newCode, members:{[id]:name}, createdAt:new Date().toISOString() };
+        if(useFirebase) await fbSet(`rooms/${newCode}`,room);
+        LS.set('profile',profile);
+        LS.set(`room_${newCode}`,room);
+        state.profile=profile;
+        renderMain();
+      });
+    }
+    if(step===3){
+      const inp=document.getElementById('codeInput');
+      inp?.focus();
+      inp?.addEventListener('input',e=>{code=e.target.value.toUpperCase();});
+      inp?.addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('joinConfirm')?.click();});
+      document.getElementById('joinConfirm')?.addEventListener('click',async()=>{
+        if(loading||code.length<4) return;
+        loading=true; err=''; draw();
+        const rc=code.toUpperCase();
+        let room=null;
+        if(useFirebase) room=await fbGet(`rooms/${rc}`);
+        if(!room) room=LS.get(`room_${rc}`);
+        if(!room){ err='존재하지 않는 방이에요'; loading=false; draw(); return; }
+        const id=uid();
+        room.members[id]=name;
+        if(useFirebase) await fbSet(`rooms/${rc}`,room);
+        LS.set(`room_${rc}`,room);
+        const profile={ uid:id, name, roomCode:rc, settings:{day:0,hour:20,minute:0,notif:false} };
+        LS.set('profile',profile);
+        state.profile=profile;
+        renderMain();
+      });
+      document.getElementById('backBtn1')?.addEventListener('click',()=>{step=1;err='';draw();});
+    }
+  }
+  draw();
+}
+
+// ── Main App ──
+let unsubPartner=null, unsubRoom=null;
+
+async function syncData(){
+  if(!state.profile) return;
+  state.syncing=true;
+  const rc=state.profile.roomCode, wk=getWeekId(), myId=state.profile.uid;
+
+  // Load room info
+  let room = useFirebase ? await fbGet(`rooms/${rc}`) : LS.get(`room_${rc}`);
+  if(room){
+    const pId=Object.keys(room.members||{}).find(k=>k!==myId);
+    if(pId) state.partnerName=room.members[pId];
+  }
+
+  // Load my entries
+  const myData = useFirebase ? await fbGet(`entries/${rc}/${wk}/${myId}`) : LS.get(`entries_${rc}_${wk}_${myId}`);
+  if(myData) state.entries=myData;
+
+  // Load partner entries
+  if(state.partnerName){
+    const pId=Object.keys((room?.members)||{}).find(k=>k!==myId);
+    if(pId){
+      const pd = useFirebase ? await fbGet(`entries/${rc}/${wk}/${pId}`) : LS.get(`entries_${rc}_${wk}_${pId}`);
+      state.partnerEntries=pd||null;
+    }
+  }
+
+  // Load history
+  const hist = useFirebase ? await fbGet(`history/${rc}`) : LS.get(`history_${rc}`);
+  if(hist) state.history=Array.isArray(hist)?hist:Object.values(hist);
+
+  state.syncing=false;
+}
+
+function setupRealtimeListeners(){
+  if(!useFirebase||!state.profile) return;
+  const rc=state.profile.roomCode, wk=getWeekId(), myId=state.profile.uid;
+
+  // Listen for room changes (partner joining)
+  unsubRoom=fbListen(`rooms/${rc}`,room=>{
+    if(!room) return;
+    const pId=Object.keys(room.members||{}).find(k=>k!==myId);
+    if(pId && room.members[pId]!==state.partnerName){
+      state.partnerName=room.members[pId];
+      renderMain();
+    }
+  });
+
+  // Listen for partner entries
+  fbListen(`entries/${rc}/${wk}`,data=>{
+    if(!data) return;
+    const pId=Object.keys(data).find(k=>k!==myId);
+    if(pId && data[pId]){
+      state.partnerEntries=data[pId];
+      if(state.tab==='write'||state.tab==='together') renderMain();
+    }
+  });
+}
+
+async function saveEntries(){
+  const rc=state.profile.roomCode, wk=getWeekId(), myId=state.profile.uid;
+  if(useFirebase) await fbSet(`entries/${rc}/${wk}/${myId}`, state.entries);
+  LS.set(`entries_${rc}_${wk}_${myId}`, state.entries);
+}
+
+async function saveAndRecord(){
+  state.saving=true; renderMain();
+  await saveEntries();
+
+  // Update history
+  const rc=state.profile.roomCode, wk=getWeekId();
+  const existing=(state.history||[]).filter(h=>h.weekId!==wk);
+  const newEntry={ weekId:wk, myData:state.entries, partnerData:state.partnerEntries, savedAt:new Date().toISOString() };
+  state.history=[newEntry,...existing];
+  if(useFirebase) await fbSet(`history/${rc}`,state.history);
+  LS.set(`history_${rc}`, state.history);
+
+  state.saving=false;
+  showToast('저장 완료! ✨');
+  renderMain();
+}
+
+function autoSave(){
+  clearTimeout(autoSave._t);
+  autoSave._t=setTimeout(()=>saveEntries(),1000);
+}
+
+function getFilledCount(){
+  return Object.values(state.entries).flat().filter(v=>v&&v.trim()).length;
+}
+
+function getCountdown(day,hour,minute){
+  const now=new Date(), target=new Date(now);
+  target.setHours(hour,minute,0,0);
+  let diff=day-now.getDay(); if(diff<0)diff+=7; if(diff===0&&now>=target)diff=7;
+  target.setDate(target.getDate()+diff);
+  const ms=target-now;
+  const d=Math.floor(ms/864e5),h=Math.floor((ms%864e5)/36e5),m=Math.floor((ms%36e5)/6e4);
+  return d>0?`${d}일 ${h}시간 ${m}분`:`${h}시간 ${m}분`;
+}
+
+function renderMain(){
+  const p=state.profile, wk=getWeekId(), filled=getFilledCount();
+  const s=p.settings||{day:0,hour:20,minute:0,notif:false};
+
+  let html=`
+  <div class="header">
+    <p class="header-label">WEEKLY REFLECTION</p>
+    <h1 class="header-title">우리의 한 주</h1>
+    <p class="header-date">${fmtDate(new Date())} · ${wk}</p>
+    <div class="header-pills">
+      <span class="pill" style="background:var(--orange-bg);color:var(--orange)">🙋 ${esc(p.name)}</span>
+      ${state.partnerName?`<span class="pill" style="background:var(--blue-bg);color:var(--blue)">💌 ${esc(state.partnerName)}</span>`:''}
+      <span class="pill" style="background:var(--green-bg);color:var(--green)">🔑 ${p.roomCode}</span>
+    </div>
+  </div>`;
+
+  // Bottom nav tabs
+  const tabs=[{id:'write',l:'✍️ 기록'},{id:'together',l:'🤝 함께'},{id:'history',l:'📚 기록함'},{id:'settings',l:'⚙️ 설정'}];
+
+  html+=`<div class="container">`;
+
+  // ── WRITE TAB ──
+  if(state.tab==='write'){
+    html+=`<div class="fade-in">
+      <div style="display:flex;align-items:center;margin-bottom:14px">
+        <div class="progress-bar"><div class="progress-fill" style="width:${(filled/9)*100}%"></div></div>
+        <span style="font-size:12px;color:var(--text4);font-family:var(--sans);margin-right:10px">${filled}/9</span>
+        <button class="btn btn-ghost btn-small" id="syncBtn">${state.syncing?'🔄':'🔄 동기화'}</button>
+      </div>`;
+
+    QS.forEach(q=>{
+      const entries=state.entries[q.key]||['','',''];
+      const pe=state.partnerEntries?.[q.key];
+      const showP=pe&&pe.some(v=>v?.trim());
+
+      html+=`<div class="qcard ${q.cls}">
+        <div class="qcard-header">
+          <span class="qcard-emoji">${q.emoji}</span>
+          <div><h3 class="qcard-title" style="color:${q.c}">${q.title}</h3><p class="qcard-sub">${q.sub}</p></div>
+        </div>`;
+
+      [0,1,2].forEach(i=>{
+        html+=`<div class="entry-row">
+          <span class="entry-num" style="background:${q.c}18;color:${q.c}">${i+1}</span>
+          <textarea class="input" rows="2" data-q="${q.key}" data-i="${i}" placeholder="${i+1}번째를 적어주세요...">${esc(entries[i]||'')}</textarea>
+        </div>`;
+      });
+
+      if(showP){
+        html+=`<div class="partner-box" style="border:1px dashed ${q.c}40">
+          <p class="partner-label" style="color:${q.c}">💌 ${esc(state.partnerName)}님의 답변</p>`;
+        pe.forEach((v,i)=>{ html+=`<p style="margin:3px 0;font-size:13.5px;color:var(--text2);line-height:1.6">${i+1}. ${esc(v||'—')}</p>`; });
+        html+=`</div>`;
+      }
+      html+=`</div>`;
+    });
+
+    html+=`<button class="btn btn-primary" id="saveBtn" style="padding:16px;font-size:16px" ${filled===0?'disabled':''}>${state.saving?'저장하는 중...':'이번 주 회고 저장하기 📝'}</button>`;
+    html+=`</div>`;
+  }
+
+  // ── TOGETHER TAB ──
+  if(state.tab==='together'){
+    html+=`<div class="fade-in">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-ghost btn-small" id="syncBtn">${state.syncing?'새로고침 중...':'🔄 파트너 답변 새로고침'}</button>
+      </div>
+      <div style="text-align:center;margin-bottom:24px;padding:22px;background:linear-gradient(135deg,var(--bg),var(--bg2));border-radius:16px;border:1px solid var(--border)">
+        <p style="font-size:32px;margin-bottom:6px">🤝</p>
+        <h3 style="font-size:18px;margin-bottom:3px">${esc(p.name)} & ${esc(state.partnerName||'파트너')}</h3>
+        <p style="font-size:12.5px;color:var(--text4);font-family:var(--sans)">${wk} 함께 보기</p>
+      </div>`;
+
+    const hasMine=Object.values(state.entries).flat().some(v=>v?.trim());
+    const hasPartner=state.partnerEntries&&Object.values(state.partnerEntries).flat().some(v=>v?.trim());
+
+    if(!hasMine&&!hasPartner){
+      html+=`<div style="text-align:center;padding:50px 20px;color:var(--text5)">
+        <p style="font-size:40px;margin-bottom:10px">✨</p>
+        <p style="font-size:15px">아직 둘 다 작성하지 않았어요</p>
+        <p style="font-size:13px;color:var(--text5)">기록 탭에서 먼저 작성해보세요!</p>
+      </div>`;
+    } else {
+      QS.forEach(q=>{
+        const mine=state.entries[q.key]||['','',''];
+        const theirs=state.partnerEntries?.[q.key]||['','',''];
+        html+=`<div class="qcard ${q.cls}">
+          <div class="qcard-header"><span class="qcard-emoji">${q.emoji}</span><h3 class="qcard-title" style="color:${q.c}">${q.title}</h3></div>
+          <div class="together-grid">
+            <div><p style="margin-bottom:8px;font-size:12px;font-weight:700;color:${q.c};font-family:var(--sans);text-align:center">🙋 ${esc(p.name)}</p>
+              ${mine.map(v=>`<div class="together-cell" style="border:1px solid var(--border)">${esc(v||'—')}</div>`).join('')}
+            </div>
+            <div><p style="margin-bottom:8px;font-size:12px;font-weight:700;color:${q.c};font-family:var(--sans);text-align:center">💌 ${esc(state.partnerName||'파트너')}</p>
+              ${theirs.map(v=>`<div class="together-cell" style="border:1px dashed ${q.c}30">${esc(v||'—')}</div>`).join('')}
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+    html+=`</div>`;
+  }
+
+  // ── HISTORY TAB ──
+  if(state.tab==='history'){
+    html+=`<div class="fade-in">`;
+    if(!state.history||state.history.length===0){
+      html+=`<div style="text-align:center;padding:50px 20px;color:var(--text5)">
+        <p style="font-size:36px;margin-bottom:8px">📖</p><p style="font-size:14px">아직 기록이 없어요</p>
+      </div>`;
+    } else {
+      state.history.forEach((e,idx)=>{
+        html+=`<div class="card history-item" data-hist="${idx}">
+          <div class="history-header">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:14px;font-weight:700;color:var(--text2)">📅 ${e.weekId}</span>
+              ${e.myData?'<span class="pill" style="background:var(--green-bg);color:var(--green);font-family:var(--sans)">내 기록 ✓</span>':''}
+              ${e.partnerData?'<span class="pill" style="background:var(--blue-bg);color:var(--blue);font-family:var(--sans)">파트너 ✓</span>':''}
+            </div>
+            <span class="history-arrow" id="arrow-${idx}">▼</span>
+          </div>
+          <div class="hidden" id="hist-detail-${idx}" style="margin-top:14px">
+            ${QS.map(q=>`<div style="margin-bottom:14px">
+              <p style="margin-bottom:6px;font-size:13px;font-weight:700;color:${q.c}">${q.emoji} ${q.title}</p>
+              <div class="together-grid">
+                <div><p style="margin-bottom:4px;font-size:11px;font-weight:600;color:var(--text4);font-family:var(--sans)">🙋 ${esc(p.name)}</p>
+                  ${(e.myData?.[q.key]||['','','']).map((v,i)=>`<p style="margin:2px 0;font-size:13px;color:var(--text2);line-height:1.5">${i+1}. ${esc(v||'—')}</p>`).join('')}
+                </div>
+                <div><p style="margin-bottom:4px;font-size:11px;font-weight:600;color:var(--text4);font-family:var(--sans)">💌 ${esc(state.partnerName||'파트너')}</p>
+                  ${(e.partnerData?.[q.key]||['','','']).map((v,i)=>`<p style="margin:2px 0;font-size:13px;color:var(--text2);line-height:1.5">${i+1}. ${esc(v||'—')}</p>`).join('')}
+                </div>
+              </div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      });
+    }
+    html+=`</div>`;
+  }
+
+  // ── SETTINGS TAB ──
+  if(state.tab==='settings'){
+    html+=`<div class="fade-in" style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">🔑 방 정보</h3>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:28px;font-weight:900;letter-spacing:5px;font-family:var(--display)">${p.roomCode}</span>
+          <button class="btn btn-ghost btn-small" id="copyCode">📋 복사</button>
+        </div>
+        <p style="font-size:13px;color:var(--text4);font-family:var(--sans)">이 코드를 파트너에게 공유하면 함께할 수 있어요</p>
+        ${state.partnerName
+          ?`<p style="margin-top:10px;font-size:14px;color:var(--blue);font-family:var(--sans)">💌 <strong>${esc(state.partnerName)}</strong>님이 함께하고 있어요!</p>`
+          :`<p style="margin-top:10px;font-size:13px;color:var(--red);font-family:var(--sans)">아직 파트너가 참여하지 않았어요</p>`}
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><h3 style="font-size:15px;font-weight:700;margin-bottom:4px">🔔 알림 설정</h3>
+            <p style="font-size:12.5px;color:var(--text4);font-family:var(--sans);margin-bottom:14px">매주 정해진 시간에 알림을 보내드려요</p>
+          </div>
+          <button class="btn btn-small" id="notifToggle" style="padding:6px 16px;border-radius:20px;font-size:13px;
+            background:${s.notif?'var(--green)':'var(--border2)'};color:${s.notif?'#fff':'var(--text3)'}">${s.notif?'ON':'OFF'}</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);font-family:var(--sans);font-weight:600;margin-bottom:8px">요일</p>
+        <div class="day-picker">
+          ${DAYS_SHORT.map((d,i)=>`<button class="day-btn ${s.day===i?'active':''}" data-day="${i}">${d}</button>`).join('')}
+        </div>
+        <p style="font-size:13px;color:var(--text2);font-family:var(--sans);font-weight:600;margin-bottom:8px">시간</p>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="hourSel">${Array.from({length:24},(_,i)=>`<option value="${i}" ${s.hour===i?'selected':''}>${String(i).padStart(2,'0')}시</option>`).join('')}</select>
+          <span style="font-size:18px;color:var(--text5)">:</span>
+          <select id="minSel">${[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}" ${s.minute===m?'selected':''}>${String(m).padStart(2,'0')}분</option>`).join('')}</select>
+        </div>
+        ${s.notif?`<div class="notif-status">
+          <p style="font-size:13px;color:var(--green);font-family:var(--sans)">✅ 매주 <strong>${DAYS_KO[s.day]}</strong> <strong>${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}</strong>에 알림</p>
+          <p style="margin-top:4px;font-size:12.5px;color:#6a9a6e;font-family:var(--sans)">⏳ 다음 알림까지 ${getCountdown(s.day,s.hour,s.minute)}</p>
+        </div>`:''}
+        <p style="margin-top:10px;font-size:11.5px;color:var(--text5);font-family:var(--sans)">* 앱이 열려있거나 설치되어 있어야 알림이 작동합니다</p>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-ghost" id="logoutBtn" style="color:var(--red)">로그아웃 (프로필 초기화)</button>
+        <p style="margin-top:8px;font-size:12px;color:var(--text5);font-family:var(--sans);text-align:center">방의 기록은 유지되며, 같은 코드로 다시 참여할 수 있어요</p>
+      </div>
+    </div>`;
+  }
+
+  html+=`</div>`; // container end
+
+  // Bottom nav
+  html+=`<div class="bottom-nav">
+    ${tabs.map(t=>`<button class="tab ${state.tab===t.id?'active':''}" data-tab="${t.id}">${t.l}</button>`).join('')}
+  </div>`;
+
+  app.innerHTML=html;
+  bindMainEvents();
+}
+
+function bindMainEvents(){
+  // Tab clicks
+  document.querySelectorAll('[data-tab]').forEach(el=>{
+    el.addEventListener('click',async()=>{
+      state.tab=el.dataset.tab;
+      if(state.tab==='together'||state.tab==='history') await syncData();
+      renderMain();
+    });
+  });
+
+  // Textarea input
+  document.querySelectorAll('textarea[data-q]').forEach(el=>{
+    el.addEventListener('input',e=>{
+      const q=el.dataset.q, i=parseInt(el.dataset.i);
+      state.entries[q][i]=e.target.value;
+      autoSave();
+      // Update progress without full re-render
+      const filled=getFilledCount();
+      const fill=document.querySelector('.progress-fill');
+      if(fill) fill.style.width=`${(filled/9)*100}%`;
+      const counter=document.querySelector('.progress-bar+span');
+      // Update save button
+      const saveBtn=document.getElementById('saveBtn');
+      if(saveBtn) saveBtn.disabled=filled===0;
+    });
+    el.addEventListener('focus',()=>el.style.borderColor=el.closest('.qcard-grateful')?'var(--green)':el.closest('.qcard-regret')?'var(--blue)':'var(--orange)');
+    el.addEventListener('blur',()=>el.style.borderColor='var(--border2)');
+  });
+
+  // Sync button
+  document.getElementById('syncBtn')?.addEventListener('click',async()=>{
+    await syncData(); renderMain();
+  });
+
+  // Save button
+  document.getElementById('saveBtn')?.addEventListener('click',()=>saveAndRecord());
+
+  // History items
+  document.querySelectorAll('.history-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const idx=el.dataset.hist;
+      const detail=document.getElementById(`hist-detail-${idx}`);
+      const arrow=document.getElementById(`arrow-${idx}`);
+      if(detail) detail.classList.toggle('hidden');
+      if(arrow) arrow.classList.toggle('open');
+    });
+  });
+
+  // Settings
+  document.getElementById('copyCode')?.addEventListener('click',()=>{
+    navigator.clipboard?.writeText(state.profile.roomCode);
+    showToast('코드가 복사되었어요!');
+  });
+
+  document.getElementById('notifToggle')?.addEventListener('click',async()=>{
+    const s=state.profile.settings;
+    if(!s.notif && Notification.permission!=='granted'){
+      const p=await Notification.requestPermission();
+      if(p!=='granted') return;
+    }
+    s.notif=!s.notif;
+    LS.set('profile',state.profile);
+    scheduleNotification();
+    renderMain();
+  });
+
+  document.querySelectorAll('.day-btn').forEach(el=>{
+    el.addEventListener('click',()=>{
+      state.profile.settings.day=parseInt(el.dataset.day);
+      LS.set('profile',state.profile);
+      scheduleNotification();
+      renderMain();
+    });
+  });
+
+  document.getElementById('hourSel')?.addEventListener('change',e=>{
+    state.profile.settings.hour=parseInt(e.target.value);
+    LS.set('profile',state.profile); scheduleNotification(); renderMain();
+  });
+  document.getElementById('minSel')?.addEventListener('change',e=>{
+    state.profile.settings.minute=parseInt(e.target.value);
+    LS.set('profile',state.profile); scheduleNotification(); renderMain();
+  });
+
+  document.getElementById('logoutBtn')?.addEventListener('click',()=>{
+    if(confirm('로그아웃하시겠어요? 방의 기록은 유지됩니다.')){
+      LS.del('profile');
+      state.profile=null; state.entries=empty(); state.partnerEntries=null; state.history=[];
+      renderOnboarding();
+    }
+  });
+}
+
+// ── Notifications ──
+let notifTimer=null;
+function scheduleNotification(){
+  if(notifTimer) clearInterval(notifTimer);
+  const s=state.profile?.settings;
+  if(!s?.notif) return;
+
+  // Try service worker notification
+  if(navigator.serviceWorker?.controller){
+    navigator.serviceWorker.controller.postMessage({ type:'SCHEDULE_NOTIF', day:s.day, hour:s.hour, minute:s.minute });
+  }
+
+  // Fallback: in-page timer
+  notifTimer=setInterval(()=>{
+    const now=new Date();
+    if(now.getDay()===s.day && now.getHours()===s.hour && now.getMinutes()===s.minute){
+      if(Notification.permission==='granted'){
+        new Notification('📝 주간 회고 시간!',{ body:'이번 주를 함께 돌아봐요', vibrate:[200,100,200] });
+      }
+    }
+  },55000);
+}
+
+// ── Init ──
+async function init(){
+  // Register service worker
+  if('serviceWorker' in navigator){
+    try{ await navigator.serviceWorker.register('./sw.js'); }catch(e){ console.log('SW registration failed:',e); }
+  }
+
+  // Check for saved profile
+  const saved=LS.get('profile');
+  if(saved){
+    state.profile=saved;
+    await syncData();
+    setupRealtimeListeners();
+    scheduleNotification();
+    renderMain();
+  } else {
+    renderOnboarding();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
